@@ -1,4 +1,4 @@
-#PRRL EEG Anlaysis
+# PRRL EEG Anlaysis
 
 These scripts are used to do eeg preprocessing for the PRRL study. The preprocessing is optimized for
 ERP analysis and are based off scripts from Anne Collins, Sarah Master, and Amy Zou.
