@@ -26,10 +26,14 @@ try
    triggers{3}.cell_string = {'124', '125'};
    triggers{4}.name = 'feed_back_triggers';
    triggers{4}.cell_string = {'130', '131', '132', '133'};
-   triggers{5}.name = 'all_prrl_eeg_triggers';
-   triggers{5}.cell_string = {'100', '110', '115', '119', '120', '121', '122', '123', '124', '125', '129', '130', '131', '132', '133', '139', '199', '200', '210', '211', '212', '213', '220', '221', '230', '239', '244', '245', '249', '253', '254', '255'};
+   triggers{5}.name = 'nback_ons_triggers';
+   triggers{5}.cell_string = {'20', '25', '30', '35', '40', '45'};
+   triggers{6}.name = 'all_prrl_eeg_triggers';
+   triggers{6}.cell_string = {'100', '110', '115', '119', '120', '121', '122', '123', '124', '125', '129', '130', '131', '132', '133', '139', '199', '200', '210', '211', '212', '213', '220', '221', '230', '239', '244', '245', '249', '253', '254', '255'};
+   triggers{7}.name = 'nback_off_triggers';
+   triggers{7}.cell_string = {'59'};
  % get input for which triggers to use
-  input_trigger = input('Enter one of the following: \n goal_point_triggers OR\n bandit_triggers OR\n choice_triggers OR\n  feed_back_triggers\n :', 's');
+  input_trigger = input('Enter one of the following: \n goal_point_triggers OR\n bandit_triggers OR\n choice_triggers OR\n feed_back_triggers OR\n nback_ons_triggers\n:', 's');
   % get index based on inputted response
   num_names = 1:size(triggers, 2);
   index = arrayfun(@(num) strcmp(triggers{num}.name, input_trigger), num_names);
@@ -62,7 +66,9 @@ try
   output_files{1}.name = sprintf('%s_interpolated_rereferenced.mat', subject_string);
   output_files{2}.name = sprintf('%s_interpolated_rereferenced_ica.mat', subject_string);
   output_files{3}.name = sprintf('%s_interpolated_rereferenced_ica_filtered.mat', subject_string);
-  output_files{1}.name = sprintf('%s_interpolated_rereferenced.mat', subject_string);
+  output_files{4}.name = sprintf('%s_first_full_interpolated_rereferenced_ica_filtered.mat', subject_string);
+  output_files{5}.name = sprintf('%s_second_interpolated_rereferenced_ica.mat', subject_string);
+  output_files{6}.name = sprintf('%s_second_interpolated_rereferenced_ica_filtered.mat', subject_string);
 
 %%% Important Note! %%%%
 % If you're trying to pick up where someone left off but MATLAB got closed:
@@ -103,7 +109,7 @@ if step == 0;
     % 3rd arg is x seconds before and y seconds after epoch
     EEG = pop_epoch( EEG, subject.triggers, [-1    2]);
     % makes sure things are still coherent
-    EEG = eeg_checkset( EEG );
+    EEG = eeg_checkset( EEG )
 
   %% Remove VEOG - gets rid of externals
     VEOG=squeeze(EEG.data(64,:,:));
@@ -138,7 +144,8 @@ if step == 0;
   % Click on messy epochs to highlight them. Scroll through all epochs.
   % When finished, press "update marks."
   % Then press control enter.
-    subject.first_rejected_epochs = input('Please enter any rejected epochs as a vector, ie [39 42 54]:');
+    input('Are you done rejecting epochs? Remember to press reject on the plot');
+    subject.first_rejected_epochs = EEG.reject.rejmanual;
     subject.rejected_epochs = subject.first_rejected_epochs;
 
     subject.first_interp = input('Please enter the channels that require interpolation as a cell of strings:');
@@ -147,8 +154,8 @@ if step == 0;
 
   %%% Reject epochs, Interpolate, and Rereference %%%
 
-  epochNumbers = [1:EEG.trials];
-  epochNumbers(subject.rejected_epochs)=[];
+  % epochNumbers = [1:EEG.trials];
+  % epochNumbers(subject.rejected_epochs)=[];
   df = 63 - length(subject.interp);
   for i = 1:length(subject.interp)
       ENTER_CHANNEL(i) = find(strcmp(subject.interp(i),chan_names)); %% fix structural issues
@@ -217,8 +224,6 @@ if step == 1
 end
 %% Data reset, display the ICA components selected
 
-clearvars -except subject_string folder step
-
 if step == 2
   subject = load(sprintf('%s/%s_interpolated_rereferenced_ica.mat', folder, subject_string));
   EEG = subject.EEG;
@@ -229,7 +234,8 @@ if step == 2
 
   %% Reject marked ICA components according to subno
 
-  subject.ICAreject = input('Please enter any bad component as a vector, ie [1 2]:');
+  subject.ICAreject = input('Have you finished rejecting components?:');
+  subject.ICAreject = find(EEG.reject.gcompreject == 1);
 
   EEG = pop_subcomp(EEG, subject.ICAreject, 0); %Removes marked component
 
@@ -246,9 +252,8 @@ if step == 2
       EEG = pop_interp(EEG,subject.badchans ,'spherical');
   end
 
-  EEG = eeg_checkset( EEG );
+  EEG = eeg_checkset( EEG )
   eeglab redraw
-  ALLEEG=[];
   pop_eegplot( EEG, 1, 1, 1);
 
   %% Filter
@@ -267,130 +272,39 @@ end
 
 %%% Second Pass cleaning %%%
 
-clearvars -except subject_string folder step;
-
 if step == 3
   subject = load(sprintf('%s/%s_interpolated_rereferenced_ica_filtered.mat', folder, subject_string));
-  EEG = subject.EEG;
+  EEG = subject.EEG
 
+  EEG = eeg_checkset( EEG )
   eeglab redraw
-  pop_eegplot( EEG, 1, 1, 0,[],'color','on');
+  EEG
+  pop_eegplot( EEG, 1, 1, 1, [],'color','on');
 
-  subject.second_rejected_epochs = input('Please enter any NEW rejected epochs as a vector, ie [39 42 54]:');
+  input('Are you done rejecting epochs? Remember to press reject on the plot');
+  subject.second_rejected_epochs = EEG.reject.rejmanual;
   subject.second_interp = input('Please enter any NEW channels that require interpolation as a cell of strings:');
+  % subject.rejected_epochs = [subject.first_rejected_epochs subject.second_rejected_epochs];
+  subject.interp = [subject.first_interp subject.second_interp];
 
-  input('Press Enter to Continue:');
+  % to_reject_second = [to_reject_second, find(EEG.reject.rejmanual)]; %add to the bad epochs from vis inspection should I use this?
 
-  time = EEG.times/1000; %% Q: Why divide by 1000?
-
-  t1 = find(time == -.5);
-  t2 = find(time <1.5);t2 = t2(end);
-
-  FILT_STIMULI = EEG.data;
-
-  for electrode = 1:64
-      figure(3)
-      clf
-      subplot(2,1,1)
-      plot(time(t1:t2),squeeze(FILT_STIMULI(electrode,t1:t2,:)),'k')
-      subplot(2,1,2)
-      plot(time(t1:t2),squeeze(mean(FILT_STIMULI(electrode,t1:t2,:),3)),'r','linewidth',2)
-
-      title(EEG.chanlocs(electrode).labels)
-      pause(6)
+  %% Second Pass %%
+  spit = input('Are you going to do a second pass? y or n ', 's');
+  if strcmp(spit,'y')
+      subject.second_pass = 'TRUE';
+      save(sprintf('%s/%s_first_full_interpolated_rereferenced_ica_filtered.mat', folder, subject_string),'-struct', 'subject');
+      step = 4;
+  else
+    step = 5;
   end
 
-  %% Identify channels with abberant ERPs for epoch ejection
-  clear ENTER_CHANNEL subject.badchans  var data_table
-  chan_names = [];
-
-  for i = 1:64 %cycle through channels
-      var = EEG.chanlocs(1,i).labels; % save channel names in table
-      temp = compose(var);
-      chan_names = [chan_names; temp];
-  end
-
-  % Enter channels (can enter multiple, will evaluate one at a time)
-  % Make sure to scroll all the way up in command window to see ALL bad eps
-
-  subject.badchans = input('Please enter the bad channels as a cell of strings:');
-
-
-  %takes bad channel names and finds their index in the EEG struct based on
-  %chan_names
-  if ~isempty(subject.badchans)
-    for i = 1:length(subject.badchans )
-        ENTER_CHANNEL(i) = find(strcmp(subject.badchans (i),chan_names));
-    end
-  end
-
-  if isempty(subject.badchans)
-      ENTER_CHANNEL = [];
-  end
-
-  k = 1; %k is the number of max and min pairs
-  for ii = ENTER_CHANNEL
-      chan = squeeze(FILT_STIMULI(ii,t1:t2,:));
-      Chanmax = max(chan);
-      Chanmin = min(chan);
-      Chanstd = std(chan);
-      Chanmean = mean(chan);
-
-      [sorted,index]=sort(Chanmax);
-      maxes = [index(end-k+1:end)];
-      maxes = fliplr(maxes);
-      [sorted,index]=sort(Chanmin);
-      mins = [index(1:k)];
-      %[maxFp1 badep1] = max(Chanmax)
-      %[minFp1 badep2] = min(Chanmin)
-
-      figure
-      plot(time(t1:t2),chan,'k')
-      hold on
-      plot(time(t1:t2),chan(:,[maxes,mins]),'linewidth',2)
-      title(chan_names(ii))
-
-      dist_from_mean_maxes = chan(ii,maxes,:) - Chanmean(maxes);
-      dist_from_mean_mins = chan(ii,mins,:) - Chanmean(mins);
-
-      data_table = table;
-      data_table.chan = repmat(chan_names(ii),k,1);
-      data_table.Max = maxes';
-      data_table.Min = mins';
-      data_table.STDfromMean_Max = (dist_from_mean_maxes./Chanstd(maxes))';
-      data_table.STDfromMean_Min = (dist_from_mean_mins./Chanstd(mins))';
-
-      disp(['Epochs to take out - enter these below.  Might only want max or min. Max is first #, min is 2nd #.']);
-      %epochNumbers([badep1,badep2])
-      data_table
-  end
-
-  input('Press Enter to Continue:');
-
-  eeglab redraw
-  pop_eegplot( EEG, 1, 1, 0,[],'color','on');
-
-
-  subject.second_rejected_epochs = input('Please enter any rejected epochs as a vector, ie [39 42 54]:');
-  subject.second_interp = input('Please enter the channels that require interpolation as a cell of strings:');
-
-  disp(['do not double select: ' num2str(sort(subject.second_rejected_epochs)) ]) % Q: should this be the first epochs
-end
-%% Second pass?
-
-% to_reject_second = [to_reject_second, find(EEG.reject.rejmanual)]; %add to the bad epochs from vis inspection should I use this?
-
-spit = input('Are you going to do a second pass? y or n ', 's');
-if strcmp(spit,'y')
-    subject.second_pass = 'TRUE';
-    save(sprintf('%s/%s_first_interpolated_rereferenced_ica_filtered.mat', folder, subject_string),'-struct', 'subject');
-else
-  step = 5;
 end
 
 if step == 4
 
   %% reload dataset
+  subject = load(sprintf('%s/%s_first_full_interpolated_rereferenced_ica_filtered.mat', folder, subject_string));
   EEG = pop_biosig(sprintf('%s/%s.bdf', subject.datapath , subject_string));
   EEG.setname= subject_string;
   pop_saveset(EEG, subject_string ,folder);
@@ -403,7 +317,7 @@ if step == 4
     % 3rd arg is x seconds before and y seconds after epoch
     EEG = pop_epoch( EEG, subject.triggers, [-1    2]);
     % makes sure things are still coherent
-    EEG = eeg_checkset( EEG );
+    EEG = eeg_checkset( EEG )
 
   %% Remove VEOG - gets rid of externals
     VEOG=squeeze(EEG.data(64,:,:));
@@ -430,9 +344,9 @@ if step == 4
         temp = compose(var);
         chan_names = [chan_names; temp];
     end
-
-    epochNumbers = [1:EEG.trials];
-    epochNumbers(subject.rejected_epochs)=[];
+    %% looks like epohc numbers are only for summary stats at the end
+    % epochNumbers = [1:EEG.trials];
+    % epochNumbers(subject.first_rejected_epochs)=[];
     df = 63 - length(subject.interp);
     for i = 1:length(subject.interp)
         ENTER_CHANNEL(i) = find(strcmp(subject.interp(i),chan_names)); %% fix structural issues
@@ -456,9 +370,16 @@ if step == 4
 
 
     %% Reject bad epochs
-      if ~isempty(subject.rejected_epochs)
+      % round 1
+      if ~isempty(subject.first_rejected_epochs)
           binarized=zeros(1,EEG.trials);
-          binarized(subject.rejected_epochs)=1;
+          binarized(subject.first_rejected_epochs)=1;
+          EEG = pop_rejepoch(EEG,binarized,0);
+      end
+      % round 2
+      if ~isempty(subject.second_rejected_epochs)
+          binarized=zeros(1,EEG.trials);
+          binarized(subject.second_rejected_epochs)=1;
           EEG = pop_rejepoch(EEG,binarized,0);
       end
 
@@ -490,10 +411,12 @@ if step == 4
       subject.EEG = EEG % save the EEG structure in the frame
       save(sprintf('%s/%s_second_interpolated_rereferenced_ica.mat', folder, subject_string),'-struct', 'subject');
       disp('Saving finished.')
+      step = 5;
 
+end
+
+if step == 5
     %% Data reset, display the ICA components selected
-
-    clearvars -except subject_string folder step
 
     subject = load(sprintf('%s/%s_second_interpolated_rereferenced_ica.mat', folder, subject_string));
     EEG = subject.EEG;
@@ -501,11 +424,11 @@ if step == 4
     %% Display ICA components %%
     pop_selectcomps(EEG, [1:10] ); %Displays topoplots
     pop_eegplot( EEG, 0, 1, 1); %Displays component scroll
-
+    pause(2);
     %% Reject marked ICA components according to subno
 
-    subject.ICAreject2 = input('Please enter any bad component as a vector, ie [1 2]:');
-
+    subject.ICAreject2 = input('Have you finished rejecting components?:');
+    subject.ICAreject2 = find(EEG.reject.gcompreject == 1);
     EEG = pop_subcomp(EEG, subject.ICAreject2, 0); %Removes marked component
 
     % Re-interpolate channels after removing bad components
@@ -521,9 +444,8 @@ if step == 4
         EEG = pop_interp(EEG,subject.badchans ,'spherical');
     end
 
-    EEG = eeg_checkset( EEG );
+    EEG = eeg_checkset( EEG )
     eeglab redraw
-    ALLEEG=[];
     pop_eegplot( EEG, 1, 1, 1);
 
     %% Filter
@@ -537,12 +459,16 @@ if step == 4
       subject.EEG = EEG;
       save(sprintf('%s/%s_second_interpolated_rereferenced_ica_filtered.mat', folder, subject_string),'-struct', 'subject');
       disp('Filtering and saving complete.')
-      step = 5;
+      step = 6;
 end
 
 if step == 6
   subject = load(sprintf('%s/%s_second_interpolated_rereferenced_ica_filtered.mat', folder, subject_string));
   EEG = subject.EEG;
+
+  % EEG = eeg_checkset( EEG )
+  % eeglab redraw
+  % pop_eegplot( EEG, 1, 1, 1, [],'color','on');
 
   time = EEG.times/1000; %% Q: Why divide by 1000?
 
@@ -560,7 +486,7 @@ if step == 6
       plot(time(t1:t2),squeeze(mean(FILT_STIMULI(electrode,t1:t2,:),3)),'r','linewidth',2)
 
       title(EEG.chanlocs(electrode).labels)
-      pause(6)
+      pause(4.5)
   end
 
   %% Identify channels with abberant ERPs for epoch ejection
@@ -583,7 +509,7 @@ if step == 6
   %chan_names
   if ~isempty(subject.badchans)
     for i = 1:length(subject.badchans )
-        ENTER_CHANNEL(i) = find(strcmp(subject.badchans (i),chan_names));
+        ENTER_CHANNEL(i) = find(strcmp(subject.badchans{i},chan_names));
     end
   end
 
@@ -626,9 +552,25 @@ if step == 6
       disp(['Epochs to take out - enter these below.  Might only want max or min. Max is first #, min is 2nd #.']);
       %epochNumbers([badep1,badep2])
       data_table
+
+  end
+
+  EEG = eeg_checkset( EEG )
+  eeglab redraw
+  EEG
+  pop_eegplot( EEG, 1, 1, 1, [],'color','on');
+
+  input('Look at the datatable above and determine if there are any more epochs ot delete. If there are, go to the epoch number on the plot and select the epochs for deletion. Press enter to continue')
+
+  subject.third_rejected_epochs = EEG.reject.rejmanual;
+  if ~isempty(subject.third_rejected_epochs)
+      binarized=zeros(1,EEG.trials);
+      binarized(subject.second_rejected_epochs)=1;
+      EEG = pop_rejepoch(EEG,binarized,0);
   end
 
 end
+
 
 %% save - DON'T FORGET THIS PART
 subject.EEG = EEG;
@@ -637,7 +579,7 @@ save(sprintf('%s/%s_interpolated_rereferenced_ica_filtered_final.mat', folder, s
 disp('Cleaning stats:')
 %% I took out the if statement on second pass, because in both cases it is length(reject_epochs) + lenght(second_rejected_epochs), just if second_pass == TRUE, the second_rejected is technically a third pass
 subject.total_num_rej_epochs = length(subject.rejected_epochs)+length(subject.second_rejected_epochs);
-subject.total_num_interps = (length(subject.interp)/epochNumbers(end))*100;
+subject.total_num_interps = (length(subject.interp)/EEG.trials(end))*100;
 disp(['Number of epochs rejected, note in lab notebook: ' num2str(subject.total_num_rej_epochs )]) % in this case
 disp(['Percentage of epochs rejected, note in lab notebook: ' num2str(subject.total_num_interps ) '%'])
 
