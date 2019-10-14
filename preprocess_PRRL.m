@@ -12,13 +12,14 @@ try
 %% Create a subject structure that will be saved as a .mat file %%
  subject = {};
  script_home = fileparts(mfilename('fullpath'));
+ cd(script_home);
  subject.datapath =  fullfile(script_home, '../eeg_data');
  subject.subject_num = input('Enter Subject #:');
  subject_num = subject.subject_num; % rename just to keep it short throughout the script
 
 %% Pick the type of data cleaning. Epochs should be a cell of strings. See read.me for details. %%
   % triggers is a structure with the name and event triggers for each type of processing
-   triggers{1}.name = 'goal_point_triggers'
+   triggers{1}.name = 'goal_point_triggers';
    triggers{1}.cell_string = {'100', '110', '115'};
    triggers{2}.name = 'bandit_triggers';
    triggers{2}.cell_string = {'120', '121', '122', '123'};
@@ -88,6 +89,7 @@ end
 step = max(steps);
 
 if step == 0;
+  
 %% Load the data
   if exist(sprintf('%s/%s.bdf', subject.datapath , subject_string))
     EEG = pop_biosig(sprintf('%s/%s.bdf', subject.datapath , subject_string));
@@ -101,28 +103,23 @@ if step == 0;
     return
   end
 
-%% Only run the following data cleaning steps if the second pass information is nonexistant. Else skip to interpolation and epoch rejection. Note, this will get confusing once you clean with different trigger sets
-
   %% add electrode cap location
-    EEG = pop_chanedit(EEG,  'lookup', locpath); % if this fails, use loc path as above but from local EEGLab
+    EEG = pop_chanedit(EEG,  'lookup', locpath);
   %% Extract epochs from the time series.
-    % 3rd arg is x seconds before and y seconds after epoch
-    EEG = pop_epoch( EEG, subject.triggers, [-1    2]);
-    % makes sure things are still coherent
+    EEG = pop_epoch( EEG, subject.triggers, [-1    2]); % 3rd arg is x secs before and y secs after epoch
+  %% makes sure things are still coherent
     EEG = eeg_checkset( EEG )
 
-  %% Remove VEOG - gets rid of externals
-    VEOG=squeeze(EEG.data(64,:,:));
-    HEOG=squeeze(EEG.data(65,:,:));
-    EEG.data=EEG.data(1:63,:,:);
-    EEG.chanlocs = EEG.chanlocs(1,1:63);
-    EEG.nbchan=63;
+  %% Remove externals
+    VEOG=squeeze(EEG.data(65,:,:));
+    HEOG=squeeze(EEG.data(66,:,:));
+    EEG.data=EEG.data(1:64,:,:);
+    EEG.chanlocs = EEG.chanlocs(1,1:64);
+    EEG.nbchan=64;
 
-  %% Re add CPz  - but don't re-ref yet (CPz is for re-referencing stuff, an average of other channels)
-    EEG = pop_chanedit(EEG, 'append',63,'changefield',{64 'CPz' 180 0.1266 -32.9279 [-4.0325e-15] 78.3630 -180 67.2080 85});
-    EEG = pop_chanedit(EEG,  'lookup', locpath);
-    % Remove mean
+  %% Remove mean
     EEG = pop_rmbase(EEG,[],[]); % removes baseline activity
+
   %% Update gui and plot
     eeglab redraw
     pop_eegplot( EEG, 1, 1, 0, [], 'color','on');
@@ -130,20 +127,13 @@ if step == 0;
   %% Grab channel names
     chan_names = [];
     subject.badchans  = [];
-
     for i = 1:EEG.nbchan %cycle through channels
         var = EEG.chanlocs(1,i).labels; % save channel names in table
         temp = compose(var);
         chan_names = [chan_names; temp];
     end
 
-
-  %% --- IN EEG LAB (BLUE POP-UP) ---
-  % First pass: (If second pass, skip)
-  % Go to "Tools > Reject data epochs > Reject by inspection"
-  % Click on messy epochs to highlight them. Scroll through all epochs.
-  % When finished, press "update marks."
-  % Then press control enter.
+  %% Identify bad epochs
     input('Are you done rejecting epochs? Remember to press reject on the plot');
     subject.first_rejected_epochs = EEG.reject.rejmanual;
     subject.rejected_epochs = subject.first_rejected_epochs;
@@ -154,9 +144,6 @@ if step == 0;
 
   %%% Reject epochs, Interpolate, and Rereference %%%
 
-  % epochNumbers = [1:EEG.trials];
-  % epochNumbers(subject.rejected_epochs)=[];
-  df = 63 - length(subject.interp);
   for i = 1:length(subject.interp)
       ENTER_CHANNEL(i) = find(strcmp(subject.interp(i),chan_names)); %% fix structural issues
   end
@@ -167,7 +154,7 @@ if step == 0;
   %% Interpolate
     if ~isempty(subject.interp)
         for xi=1:size(subject.interp,2)
-            for ei=1:63
+            for ei=1:64
                 if strmatch(EEG.chanlocs(ei).labels,subject.interp{xi});
                     subject.badchans (xi)=ei;
                 end
@@ -185,10 +172,10 @@ if step == 0;
         EEG = pop_rejepoch(EEG,binarized,0);
     end
 
-
   %% Rereference
-    EEG = pop_reref(EEG, [],'refloc',struct('labels',{'CPz'},'type',{[]},'theta',{180},'radius',{0.12662},'X',{-32.9279},'Y',{-4.0325e-15},'Z',{78.363},'sph_theta',{-180},'sph_phi',{67.208},'sph_radius',{85},'urchan',{64},'ref',{''}));
+  EEG = pop_reref(EEG, []);
 
+  %% Save
   subject.EEG = EEG % save the EEG structure in the frame
   save(sprintf('%s/%s_interpolated_rereferenced.mat', folder, subject_string),'-struct', 'subject');
   step = 1;
@@ -206,8 +193,8 @@ if step == 1
       ENTER_CHANNEL = [];
   end
 
-  channels = [1:63];
-  idx = ismember(channels,ENTER_CHANNEL); %%% can channels have the same name?
+  channels = [1:64];
+  idx = ismember(channels,ENTER_CHANNEL);
   channels(idx) = [];
 
   %Remove channels from list
@@ -242,7 +229,7 @@ if step == 2
   % Re-interpolate channels after removing bad components
   if ~isempty(subject.interp)
       for xi=1:size(subject.interp,2)
-          for ei=1:63
+          for ei=1:64
               if strmatch(EEG.chanlocs(ei).labels,subject.interp{xi});
                   subject.badchans (xi)=ei;
               end
@@ -259,7 +246,7 @@ if step == 2
   %% Filter
     input('Ready to start filtering?');
     dims = size(EEG.data);
-    FILT=eegfilt(EEG.data,EEG.srate,[],15); % low pass filter below 15.
+    FILT=eegfilt(EEG.data,EEG.srate,[],20); % low pass filter below 15.
     FILT=eegfilt(FILT,EEG.srate,.5,[]); % high pass filter above .5.   eegfilt
     EEG.data = reshape(FILT,dims(1),dims(2),dims(3));
     pop_eegplot( EEG, 1, 1, 1);
@@ -270,7 +257,7 @@ if step == 2
     step = 3;
 end
 
-%%% Second Pass cleaning %%%
+%% Second Pass cleaning %%
 
 if step == 3
   subject = load(sprintf('%s/%s_interpolated_rereferenced_ica_filtered.mat', folder, subject_string));
@@ -279,7 +266,95 @@ if step == 3
   EEG = eeg_checkset( EEG )
   eeglab redraw
   EEG
-  pop_eegplot( EEG, 1, 1, 1, [],'color','on');
+  pop_eegplot( EEG, 1, 1, 0, [],'color','on');
+
+  time = EEG.times/1000; %% Q: Why divide by 1000?
+
+  t1 = find(time == -.5);
+  t2 = find(time <1.5);t2 = t2(end);
+
+  FILT_STIMULI = EEG.data;
+  subject.badchans = {};
+  elec = 1;
+  for electrode = 1:64
+      figure(3)
+      clf
+      subplot(2,1,1)
+      plot(time(t1:t2),squeeze(FILT_STIMULI(electrode,t1:t2,:)),'k')
+      subplot(2,1,2)
+      plot(time(t1:t2),squeeze(mean(FILT_STIMULI(electrode,t1:t2,:),3)),'r','linewidth',2)
+
+      title(EEG.chanlocs(electrode).labels)
+      spit = input('Investigate? y or n ', 's');
+      if strcmp(spit,'y')
+        subject.badchans{elec} = {EEG.chanlocs(electrode).labels}
+        elec = elec + 1;
+      end
+  end
+  pause(2);
+  %% Identify channels with abberant ERPs for epoch ejection
+  clear ENTER_CHANNEL subject.badchans  var data_table
+  chan_names = [];
+
+  for i = 1:64 %cycle through channels
+      var = EEG.chanlocs(1,i).labels; % save channel names in table
+      temp = compose(var);
+      chan_names = [chan_names; temp];
+  end
+
+  % Enter channels (can enter multiple, will evaluate one at a time)
+  % Make sure to scroll all the way up in command window to see ALL bad eps
+
+  %takes bad channel names and finds their index in the EEG struct based on
+  %chan_names
+  if ~isempty(subject.badchans)
+    for i = 1:length(subject.badchans )
+        ENTER_CHANNEL(i) = find(strcmp(subject.badchans{i},chan_names));
+    end
+  end
+
+  if isempty(subject.badchans)
+      ENTER_CHANNEL = [];
+  end
+
+  k = 3; %k is the number of max and min pairs
+  for ii = ENTER_CHANNEL
+      chan = squeeze(FILT_STIMULI(ii,t1:t2,:));
+      Chanmax = max(chan);
+      Chanmin = min(chan);
+      Chanstd = std(chan);
+      Chanmean = mean(chan);
+
+      [sorted,index]=sort(Chanmax);
+      maxes = [index(end-k+1:end)];
+      maxes = fliplr(maxes);
+      [sorted,index]=sort(Chanmin);
+      mins = [index(1:k)];
+      %[maxFp1 badep1] = max(Chanmax)
+      %[minFp1 badep2] = min(Chanmin)
+
+      figure
+      plot(time(t1:t2),chan,'k')
+      hold on
+      plot(time(t1:t2),chan(:,[maxes,mins]),'linewidth',2)
+      title(chan_names(ii))
+
+      dist_from_mean_maxes = chan(ii,maxes,:) - Chanmean(maxes);
+      dist_from_mean_mins = chan(ii,mins,:) - Chanmean(mins);
+
+      data_table = table;
+      data_table.chan = repmat(chan_names(ii),k,1);
+      data_table.Max = maxes';
+      data_table.Min = mins';
+      data_table.STDfromMean_Max = (dist_from_mean_maxes./Chanstd(maxes))';
+      data_table.STDfromMean_Min = (dist_from_mean_mins./Chanstd(mins))';
+
+      disp(['Epochs to take out - enter these below.  Might only want max or min. Max is first #, min is 2nd #.']);
+      %epochNumbers([badep1,badep2])
+      data_table
+
+  end
+
 
   input('Are you done rejecting epochs? Remember to press reject on the plot');
   subject.second_rejected_epochs = EEG.reject.rejmanual;
@@ -302,7 +377,8 @@ if step == 3
 end
 
 if step == 4
-
+  %% clear vars
+  clear ENTER_CHANNEL
   %% reload dataset
   subject = load(sprintf('%s/%s_first_full_interpolated_rereferenced_ica_filtered.mat', folder, subject_string));
   EEG = pop_biosig(sprintf('%s/%s.bdf', subject.datapath , subject_string));
@@ -320,17 +396,19 @@ if step == 4
     EEG = eeg_checkset( EEG )
 
   %% Remove VEOG - gets rid of externals
-    VEOG=squeeze(EEG.data(64,:,:));
-    HEOG=squeeze(EEG.data(65,:,:));
-    EEG.data=EEG.data(1:63,:,:);
-    EEG.chanlocs = EEG.chanlocs(1,1:63);
-    EEG.nbchan=63;
+    VEOG=squeeze(EEG.data(65,:,:));
+    HEOG=squeeze(EEG.data(66,:,:));
+    EEG.data=EEG.data(1:64,:,:);
+    EEG.chanlocs = EEG.chanlocs(1,1:64);
+    EEG.nbchan=64;
 
   %% Re add CPz  - but don't re-ref yet (CPz is for re-referencing stuff, an average of other channels)
-    EEG = pop_chanedit(EEG, 'append',63,'changefield',{64 'CPz' 180 0.1266 -32.9279 [-4.0325e-15] 78.3630 -180 67.2080 85});
-    EEG = pop_chanedit(EEG,  'lookup', locpath);
+  %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%'sph_theta',{-180},'sph_phi',{67.208},'sph_radius',{85},'urchan',{64},'ref',{''}
+    % EEG = pop_chanedit(EEG, 'append',64,'changefield',{65 'CPz' 180 0.1266 -32.9279 [-4.0325e-15] 78.3630 -180 67.2080 85});
+    % EEG = pop_chanedit(EEG,  'lookup', locpath);
     % Remove mean
     EEG = pop_rmbase(EEG,[],[]); % removes baseline activity
+
   %% Update gui and plot
     eeglab redraw
     pop_eegplot( EEG, 1, 1, 0, [], 'color','on');
@@ -344,10 +422,7 @@ if step == 4
         temp = compose(var);
         chan_names = [chan_names; temp];
     end
-    %% looks like epohc numbers are only for summary stats at the end
-    % epochNumbers = [1:EEG.trials];
-    % epochNumbers(subject.first_rejected_epochs)=[];
-    df = 63 - length(subject.interp);
+
     for i = 1:length(subject.interp)
         ENTER_CHANNEL(i) = find(strcmp(subject.interp(i),chan_names)); %% fix structural issues
     end
@@ -358,7 +433,7 @@ if step == 4
     %% Interpolate
       if ~isempty(subject.interp)
           for xi=1:size(subject.interp,2)
-              for ei=1:63
+              for ei=1:64
                   if strmatch(EEG.chanlocs(ei).labels,subject.interp{xi});
                       subject.badchans (xi)=ei;
                   end
@@ -397,8 +472,8 @@ if step == 4
           ENTER_CHANNEL = [];
       end
 
-      channels = [1:63];
-      idx = ismember(channels,ENTER_CHANNEL); %%% can channels have the same name?
+      channels = [1:64];
+      idx = ismember(channels,ENTER_CHANNEL); %%% no channels should have the same name
       channels(idx) = [];
 
       %Remove channels from list
@@ -434,7 +509,7 @@ if step == 5
     % Re-interpolate channels after removing bad components
     if ~isempty(subject.interp)
         for xi=1:size(subject.interp,2)
-            for ei=1:63
+            for ei=1:64
                 if strmatch(EEG.chanlocs(ei).labels,subject.interp{xi});
                     subject.badchans (xi)=ei;
                 end
@@ -451,7 +526,7 @@ if step == 5
     %% Filter
       input('Ready to start filtering?');
       dims = size(EEG.data);
-      FILT=eegfilt(EEG.data,EEG.srate,[],15); % low pass filter below 15.
+      FILT=eegfilt(EEG.data,EEG.srate,[],20); % low pass filter below 15.
       FILT=eegfilt(FILT,EEG.srate,.5,[]); % high pass filter above .5.   eegfilt
       EEG.data = reshape(FILT,dims(1),dims(2),dims(3));
       pop_eegplot( EEG, 1, 1, 1);
@@ -466,17 +541,14 @@ if step == 6
   subject = load(sprintf('%s/%s_second_interpolated_rereferenced_ica_filtered.mat', folder, subject_string));
   EEG = subject.EEG;
 
-  % EEG = eeg_checkset( EEG )
-  % eeglab redraw
-  % pop_eegplot( EEG, 1, 1, 1, [],'color','on');
-
   time = EEG.times/1000; %% Q: Why divide by 1000?
 
   t1 = find(time == -.5);
   t2 = find(time <1.5);t2 = t2(end);
 
   FILT_STIMULI = EEG.data;
-
+  subject.badchans = {};
+  elec = 1;
   for electrode = 1:64
       figure(3)
       clf
@@ -486,11 +558,15 @@ if step == 6
       plot(time(t1:t2),squeeze(mean(FILT_STIMULI(electrode,t1:t2,:),3)),'r','linewidth',2)
 
       title(EEG.chanlocs(electrode).labels)
-      pause(4.5)
+      spit = input('Investigate? y or n ', 's');
+      if strcmp(spit,'y')
+        subject.badchans{elec} = {EEG.chanlocs(electrode).labels}
+        elec = elec + 1;
+      end
   end
-
+  pause(2);
   %% Identify channels with abberant ERPs for epoch ejection
-  clear ENTER_CHANNEL subject.badchans  var data_table
+  clear ENTER_CHANNEL  var data_table
   chan_names = [];
 
   for i = 1:64 %cycle through channels
@@ -501,9 +577,6 @@ if step == 6
 
   % Enter channels (can enter multiple, will evaluate one at a time)
   % Make sure to scroll all the way up in command window to see ALL bad eps
-
-  subject.badchans = input('Please enter the bad channels as a cell of strings:');
-
 
   %takes bad channel names and finds their index in the EEG struct based on
   %chan_names
@@ -517,7 +590,7 @@ if step == 6
       ENTER_CHANNEL = [];
   end
 
-  k = 1; %k is the number of max and min pairs
+  k = 3; %k is the number of max and min pairs
   for ii = ENTER_CHANNEL
       chan = squeeze(FILT_STIMULI(ii,t1:t2,:));
       Chanmax = max(chan);
@@ -558,7 +631,7 @@ if step == 6
   EEG = eeg_checkset( EEG )
   eeglab redraw
   EEG
-  pop_eegplot( EEG, 1, 1, 1, [],'color','on');
+  pop_eegplot( EEG, 1, 1, 0, [],'color','on');
 
   input('Look at the datatable above and determine if there are any more epochs ot delete. If there are, go to the epoch number on the plot and select the epochs for deletion. Press enter to continue')
 
@@ -578,10 +651,12 @@ save(sprintf('%s/%s_interpolated_rereferenced_ica_filtered_final.mat', folder, s
 
 disp('Cleaning stats:')
 %% I took out the if statement on second pass, because in both cases it is length(reject_epochs) + lenght(second_rejected_epochs), just if second_pass == TRUE, the second_rejected is technically a third pass
-subject.total_num_rej_epochs = length(subject.rejected_epochs)+length(subject.second_rejected_epochs);
-subject.total_num_interps = (length(subject.interp)/EEG.trials(end))*100;
+subject.orig_length = length(subject.first_rejected_epochs);
+subject.total_num_rej_epochs = length(subject.first_rejected_epochs) - sum(subject.third_rejected_epochs == 0);
+subject.percentage_rejected = subject.total_num_rej_epochs/subject.orig_length
+subject.total_num_interps = length(subject.interp);
 disp(['Number of epochs rejected, note in lab notebook: ' num2str(subject.total_num_rej_epochs )]) % in this case
-disp(['Percentage of epochs rejected, note in lab notebook: ' num2str(subject.total_num_interps ) '%'])
+disp(['Percentage of epochs rejected, note in lab notebook: ' num2str(subject.percentage_rejected ) '%'])
 
 
 catch err
