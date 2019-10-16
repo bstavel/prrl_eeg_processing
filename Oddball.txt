@@ -1,0 +1,2 @@
+Oddball:
+triggers = {200,201,202}
