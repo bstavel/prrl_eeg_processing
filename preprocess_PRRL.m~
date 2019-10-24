@@ -83,8 +83,8 @@ if step == 0;
 
 %% Load the data
   subject = load_eeg_data(subject.datapath, folder, subject_string, locpath, subject);
-  subject.num_epochs = subject.EEG.trials;
-  EEG = subject.EEG;
+  subject.num_epochs = EEG.trials;
+  EEG = subject.eeg;
   %% Update gui and plot
     % eeglab redraw
 
