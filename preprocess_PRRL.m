@@ -13,7 +13,7 @@ try
  subject = {};
  script_home = fileparts(mfilename('fullpath'));
  cd(script_home);
- subject.datapath = input('What is the path to the data (put in quotes)?\n ../eeg_data\n ../../Brooke/eeg_data\n other\n:', 's');
+ subject.datapath = input('What is the path to the data?\n ../eeg_data\n ../../Brooke/eeg_data\n other\n:', 's');
  subject.subject_num = input('Enter Subject #:');
  subject_num = subject.subject_num; % rename just to keep it short throughout the script
  subject.first_rejected_epochs = [];
@@ -48,9 +48,8 @@ try
   subject.triggers = triggers{num_names(index)}.cell_string;
 
 %% add the eeg lab functions
-  locpath=('./EEGLAB/eeglab13_6_5b/plugins/dipfit2.3/standard_BESA/standard-10-5-cap385.elp');
-  addpath('./EEGLAB/eeglab13_6_5b/');
-  % addpath(genpath('../../Sarah/MATLAB/EEG Data/eeglab13_6_5b/'))
+  locpath=sprintf('%s/EEGLAB/eeglab13_6_5b/plugins/dipfit2.3/standard_BESA/standard-10-5-cap385.elp', script_home);
+  addpath(sprintf('%s/EEGLAB/eeglab13_6_5b/', script_home));
 
 %% initialize eeglab
   [ALLEEG, EEG, CURRENTSET, ALLCOM] = eeglab;
@@ -95,8 +94,8 @@ if step == 0;
 
 %% Load the data
   subject = load_eeg_data(subject.datapath, folder, subject_string, locpath, subject);
+  EEG = subject.EEG;
   subject.num_epochs = EEG.trials;
-  EEG = subject.eeg;
   %% Update gui and plot
     % eeglab redraw
 
