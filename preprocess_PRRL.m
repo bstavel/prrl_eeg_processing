@@ -13,7 +13,7 @@ try
  subject = {};
  script_home = fileparts(mfilename('fullpath'));
  cd(script_home);
- subject.datapath =  fullfile(script_home, '../eeg_data');
+ subject.datapath = input('What is the path to the data (put in quotes)?\n ../eeg_data\n ../../Brooke/eeg_data\n other\n:', 's');
  subject.subject_num = input('Enter Subject #:');
  subject_num = subject.subject_num; % rename just to keep it short throughout the script
  subject.first_rejected_epochs = [];
@@ -48,8 +48,8 @@ try
   subject.triggers = triggers{num_names(index)}.cell_string;
 
 %% add the eeg lab functions
-  locpath=('../../Sarah/MATLAB/EEG Data/eeglab13_6_5b/plugins/dipfit2.3/standard_BESA/standard-10-5-cap385.elp');
-  addpath('../../Sarah/MATLAB/EEG Data/eeglab13_6_5b/');
+  locpath=('./EEGLAB/eeglab13_6_5b/plugins/dipfit2.3/standard_BESA/standard-10-5-cap385.elp');
+  addpath('./EEGLAB/eeglab13_6_5b/');
   % addpath(genpath('../../Sarah/MATLAB/EEG Data/eeglab13_6_5b/'))
 
 %% initialize eeglab
