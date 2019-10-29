@@ -24,22 +24,10 @@ try
 
 %% Pick the type of data cleaning. Epochs should be a cell of strings. See read.me for details. %%
   % triggers is a structure with the name and event triggers for each type of processing
-   triggers{1}.name = 'goal_point_triggers';
-   triggers{1}.cell_string = {'100', '110', '115'};
-   triggers{2}.name = 'bandit_triggers';
-   triggers{2}.cell_string = {'120', '121', '122', '123'};
-   triggers{3}.name = 'choice_triggers';
-   triggers{3}.cell_string = {'124', '125'};
-   triggers{4}.name = 'feed_back_triggers';
-   triggers{4}.cell_string = {'130', '131', '132', '133'};
-   triggers{5}.name = 'nback_ons_triggers';
-   triggers{5}.cell_string = {'20', '25', '30', '35', '40', '45'};
-   triggers{6}.name = 'all_prrl_eeg_triggers';
-   triggers{6}.cell_string = {'100', '110', '115', '119', '120', '121', '122', '123', '124', '125', '129', '130', '131', '132', '133', '139', '199', '200', '210', '211', '212', '213', '220', '221', '230', '239', '244', '245', '249', '253', '254', '255'};
-   triggers{7}.name = 'nback_off_triggers';
-   triggers{7}.cell_string = {'59'};
+   triggers{1}.name = 'stim_triggers';
+   triggers{1}.cell_string = {'200', '201', '202'};
  % get input for which triggers to use
- input_trigger = input('Enter one of the following: \n goal_point_triggers OR\n bandit_triggers OR\n choice_triggers OR\n feed_back_triggers OR\n nback_ons_triggers\n:', 's');
+ input_trigger = input('Enter one of the following: \n stim_triggers OR\n feedback_triggers:', 's');
   % get index based on inputted response
   num_names = 1:size(triggers, 2);
   index = arrayfun(@(num) strcmp(triggers{num}.name, input_trigger), num_names);
