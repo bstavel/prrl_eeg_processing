@@ -62,10 +62,10 @@ try
   end
 
 %% make new directory
-  subject_string = sprintf('PRRL_%s_%d', subject.triggers_name, subject_num);
-  status = mkdir(sprintf('PRRL/%s', subject_string));
-  folder = sprintf('PRRL/%s', subject_string);
-  subject_string = sprintf('PRRL_%d', subject_num); % remove trigger name for all output files
+  subject_string = sprintf('Oddball_%s_%d', subject.triggers_name, subject_num);
+  status = mkdir(sprintf('preprocessed_data/%s', subject_string));
+  folder = sprintf('preprocessed_data/%s', subject_string);
+  subject_string = sprintf('Oddball_%d', subject_num); % remove trigger name for all output files
 
 %% File structure. This helps us to determine what files in the dir correspond to the next step %%
   output_files{1}.name = sprintf('%s_interpolated_rereferenced.mat', subject_string);
