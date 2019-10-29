@@ -49,7 +49,7 @@ try
 
 %% add the eeg lab functions
   locpath=sprintf('%s/EEGLAB/eeglab13_6_5b/plugins/dipfit2.3/standard_BESA/standard-10-5-cap385.elp', script_home);
-  addpath('./EEGLAB/eeglab13_6_5b/');	  addpath(sprintf('%s/EEGLAB/eeglab13_6_5b/', script_home));
+  addpath(sprintf('%s/EEGLAB/eeglab13_6_5b/', script_home));
 
 %% initialize eeglab
   [ALLEEG, EEG, CURRENTSET, ALLCOM] = eeglab;
