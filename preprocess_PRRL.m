@@ -39,7 +39,7 @@ try
    triggers{7}.name = 'nback_off_triggers';
    triggers{7}.cell_string = {'59'};
  % get input for which triggers to use
-  input_trigger = input('Enter one of the following: \n goal_point_triggers OR\n bandit_triggers OR\n choice_triggers OR\n feed_back_triggers OR\n nback_ons_triggers\n:', 's');
+ input_trigger = input('Enter one of the following: \n goal_point_triggers OR\n bandit_triggers OR\n choice_triggers OR\n feed_back_triggers OR\n nback_ons_triggers\n:', 's');
   % get index based on inputted response
   num_names = 1:size(triggers, 2);
   index = arrayfun(@(num) strcmp(triggers{num}.name, input_trigger), num_names);
@@ -507,6 +507,16 @@ if step == 8
 end
 
 if step == 9
+  %% extract trial type info and save in human usable format %%
+  event_list = NaN(length(subject.EEG.epoch), 1);
+  for i = 1:length(subject.EEG.epoch)
+    tmp_cell = subject.EEG.epoch(i).eventtype;
+    trigNum = str2num(str2mat(subject.triggers));
+    cellIdx = cellfun(@(cell) sum(cell == trigNum), tmp_cell);
+    event_list(i) = tmp_cell{find(cellIdx == 1)} ;
+  end
+  subject.final_event_list = event_list ;
+
   %% save - DON'T FORGET THIS PART
   subject.EEG = EEG;
   save(sprintf('%s/%s_interpolated_rereferenced_ica_filtered_FINAL.mat', folder, subject_string),'-struct', 'subject');
@@ -523,15 +533,6 @@ if step == 9
     end
     delete(extra_files.name);
   end
-  %% extract trial type info and save in human usable format %%
-  event_list = NaN(length(subject.EEG.epoch), 1);
-  for i = 1:length(subject.EEG.epoch)
-    tmp_cell = subject.EEG.epoch(i).eventtype;
-    trigNum = str2num(str2mat(subject.triggers));
-    cellIdx = cellfun(@(cell) sum(cell == trigNum), tmp_cell);
-    event_list(i) = tmp_cell{find(cellIdx == 1)} ;
-  end
-  subject.final_event_list = event_list ;
 
   disp('Cleaning stats:')
   if strcmp(subject.third_pass, 'TRUE')
