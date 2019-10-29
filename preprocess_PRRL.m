@@ -52,8 +52,8 @@ try
 
 %% make new directory
   subject_string = sprintf('Oddball_%s_%d', subject.triggers_name, subject_num);
-  status = mkdir(sprintf('Oddball/%s', subject_string));
-  folder = sprintf('Oddball/%s', subject_string);
+  status = mkdir(sprintf('preprocessed_data/%s', subject_string));
+  folder = sprintf('preprocessed_data/%s', subject_string);
   subject_string = sprintf('Oddball_%d', subject_num); % remove trigger name for all output files
 
 %% File structure. This helps us to determine what files in the dir correspond to the next step %%
