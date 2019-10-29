@@ -13,7 +13,7 @@ try
  subject = {};
  script_home = fileparts(mfilename('fullpath'));
  cd(script_home);
- subject.datapath = input('What is the path to the data?\n ../eeg_data\n ../../Brooke/eeg_data\n other\n:', 's');
+ subject.datapath =  fullfile(script_home, '../eeg_data');
  subject.subject_num = input('Enter Subject #:');
  subject_num = subject.subject_num; % rename just to keep it short throughout the script
  subject.first_rejected_epochs = [];
@@ -48,8 +48,9 @@ try
   subject.triggers = triggers{num_names(index)}.cell_string;
 
 %% add the eeg lab functions
-  locpath=sprintf('%s/EEGLAB/eeglab13_6_5b/plugins/dipfit2.3/standard_BESA/standard-10-5-cap385.elp', script_home);
-  addpath(sprintf('%s/EEGLAB/eeglab13_6_5b/', script_home));
+  locpath=('../../../Sarah/MATLAB/EEG Data/eeglab13_6_5b/plugins/dipfit2.3/standard_BESA/standard-10-5-cap385.elp');
+  addpath('../../../Sarah/MATLAB/EEG Data/eeglab13_6_5b/');
+  % addpath(genpath('../../Sarah/MATLAB/EEG Data/eeglab13_6_5b/'))
 
 %% initialize eeglab
   [ALLEEG, EEG, CURRENTSET, ALLCOM] = eeglab;
@@ -94,8 +95,8 @@ if step == 0;
 
 %% Load the data
   subject = load_eeg_data(subject.datapath, folder, subject_string, locpath, subject);
+  subject.num_epochs = subject.EEG.trials;
   EEG = subject.EEG;
-  subject.num_epochs = EEG.trials;
   %% Update gui and plot
     % eeglab redraw
 
@@ -507,16 +508,6 @@ if step == 8
 end
 
 if step == 9
-  %% extract trial type info and save in human usable format %%
-  event_list = NaN(length(subject.EEG.epoch), 1);
-  for i = 1:length(subject.EEG.epoch)
-    tmp_cell = subject.EEG.epoch(i).eventtype;
-    trigNum = str2num(str2mat(subject.triggers));
-    cellIdx = cellfun(@(cell) sum(cell == trigNum), tmp_cell);
-    event_list(i) = tmp_cell{find(cellIdx == 1)} ;
-  end
-  subject.final_event_list = event_list ;
-
   %% save - DON'T FORGET THIS PART
   subject.EEG = EEG;
   save(sprintf('%s/%s_interpolated_rereferenced_ica_filtered_FINAL.mat', folder, subject_string),'-struct', 'subject');
@@ -533,6 +524,15 @@ if step == 9
     end
     delete(extra_files.name);
   end
+  %% extract trial type info and save in human usable format %%
+  event_list = NaN(length(subject.EEG.epoch), 1);
+  for i = 1:length(subject.EEG.epoch)
+    tmp_cell = subject.EEG.epoch(i).eventtype;
+    trigNum = str2num(str2mat(subject.triggers));
+    cellIdx = cellfun(@(cell) sum(cell == trigNum), tmp_cell);
+    event_list(i) = tmp_cell{find(cellIdx == 1)} ;
+  end
+  subject.final_event_list = event_list ;
 
   disp('Cleaning stats:')
   if strcmp(subject.third_pass, 'TRUE')
