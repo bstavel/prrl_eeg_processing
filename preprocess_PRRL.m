@@ -104,7 +104,8 @@ if step == 0;
 
   %% Identify bad epochs and channels
     input('Are you done rejecting epochs? Remember to press reject on the plot');
-    subject.first_rejected_epochs = EEG.reject.rejmanual;
+    idx = size(ALLEEG, 2);
+    subject.first_rejected_epochs = ALLEEG(idx).reject.rejmanual ;
     subject.first_interp = input('Please enter the channels that require interpolation as a cell of strings:');
     subject.interp = subject.first_interp ;
 
@@ -233,8 +234,8 @@ if step == 3
 
 
     input('Look at the datatable above and determine if there are any more epochs ot delete. If there are, go to the epoch number on the plot and select the epochs for deletion. Press enter to continue')
-
-    subject.second_rejected_epochs = EEG.reject.rejmanual;
+    idx = size(ALLEEG, 2);
+    subject.second_rejected_epochs = ALLEEG(idx).reject.rejmanual ;
     subject.second_interp = input('Please enter any NEW channels that require interpolation as a cell of strings:');
     subject.interp = [subject.first_interp subject.second_interp];
 
@@ -379,8 +380,8 @@ if step == 6
 
 
     input('Look at the datatable above and determine if there are any more epochs ot delete. If there are, go to the epoch number on the plot and select the epochs for deletion. Press enter to continue')
-
-    subject.third_rejected_epochs = EEG.reject.rejmanual;
+    idx = size(ALLEEG, 2);
+    subject.third_rejected_epochs = ALLEEG(idx).reject.rejmanual ;
     subject.third_interp = input('Please enter any NEW channels that require interpolation as a cell of strings:');
     subject.interp = [subject.first_interp subject.second_interp subject.third_interp];
 
@@ -516,6 +517,9 @@ if step == 9
     event_list(i) = tmp_cell{find(cellIdx == 1)} ;
   end
   subject.final_event_list = event_list ;
+
+  %% any additional notes?
+  subject.notes = input('Please enter any additional notes you may for this subject:', 's');
 
   %% save - DON'T FORGET THIS PART
   subject.EEG = EEG;
