@@ -46,7 +46,7 @@ function subject = reject_interp_reref(subject)
     % round 3
     if ~isempty(subject.third_rejected_epochs)
         binarized=zeros(1,EEG.trials);
-        binarized(subject.second_rejected_epochs)=1;
+        binarized(subject.third_rejected_epochs)=1;
         EEG = pop_rejepoch(EEG,binarized,0);
     end
 
