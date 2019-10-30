@@ -48,8 +48,8 @@ try
   subject.triggers = triggers{num_names(index)}.cell_string;
 
 %% add the eeg lab functions
-  locpath=sprintf('%s/EEGLAB/eeglab13_6_5b/plugins/dipfit2.3/standard_BESA/standard-10-5-cap385.elp', script_home);
-  addpath(sprintf('%s/EEGLAB/eeglab13_6_5b/', script_home));
+  locpath=sprintf('%s/eeglab13_6_5b/plugins/dipfit2.3/standard_BESA/standard-10-5-cap385.elp', script_home);
+  addpath(sprintf('%s/eeglab13_6_5b/', script_home));
 
 %% initialize eeglab
   [ALLEEG, EEG, CURRENTSET, ALLCOM] = eeglab;
@@ -104,8 +104,12 @@ if step == 0;
 
   %% Identify bad epochs and channels
     input('Are you done rejecting epochs? Remember to press reject on the plot');
-    idx = size(ALLEEG, 2);
-    subject.first_rejected_epochs = ALLEEG(idx).reject.rejmanual ;
+    if exist(ALLEEG)
+      idx = size(ALLEEG, 2);
+      subject.first_rejected_epochs = ALLEEG(idx).reject.rejmanual ;
+    else
+      subject.first_rejected_epochs = EEG.reject.rejmanual;
+    end
     subject.first_interp = input('Please enter the channels that require interpolation as a cell of strings:');
     subject.interp = subject.first_interp ;
 
@@ -554,9 +558,11 @@ end
 
 
 catch err
-  subject.EEG = EEG;
-  save(sprintf('%s/%s_interrupted_during_step%d.mat', folder, subject_string, step),'-struct', 'subject');
   err
   'On lines'
   err.stack.line
+  if exist('EEG')
+    subject.EEG = EEG;
+  end
+  save(sprintf('%s/%s_interrupted_during_step%d.mat', folder, subject_string, step),'-struct', 'subject');
 end
