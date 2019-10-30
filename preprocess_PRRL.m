@@ -104,7 +104,7 @@ if step == 0;
 
   %% Identify bad epochs and channels
     input('Are you done rejecting epochs? Remember to press reject on the plot');
-    if exist(ALLEEG)
+    if exist('ALLEEG')
       idx = size(ALLEEG, 2);
       subject.first_rejected_epochs = ALLEEG(idx).reject.rejmanual ;
     else
