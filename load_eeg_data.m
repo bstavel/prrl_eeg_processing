@@ -18,6 +18,7 @@ function subject = load_eeg_data(datapath, folder, subject_string, locpath, subj
 
   %% Load data
     if exist(sprintf('%s/%s.bdf', datapath , subject_string))
+      cd('../eeg_data'); % adding this to cope with different folders. how is this working for everyone else. 
       EEG = pop_biosig(sprintf('%s/%s.bdf', subject.datapath , subject_string));
       EEG.setname= subject_string;
       pop_saveset(EEG, subject_string ,folder);

@@ -1,4 +1,4 @@
-%% Quesstions
+%% Questions
 %
 % For analysis: Should data be re-sampled at 250 Hz? At 500 currently. Yes
 % - after cleaning.
@@ -11,9 +11,13 @@ try
 
 %% Create a subject structure that will be saved as a .mat file %%
  subject = {};
- script_home = fileparts(mfilename('fullpath'));
- cd(script_home);
- subject.datapath = input('What is the path to the data?\n ../eeg_data\n ../../Brooke/eeg_data\n other\n:', 's');
+ script_home = fileparts(mfilename('fullpath')); % this is where the preproc script lives
+ %script_home = pwd; %(because i'm not running anything right now)
+ cd(script_home); % go to preproc's folder
+ % amy adding comments bc english is hard and matlab is also hard
+ 
+% where the data files live
+ subject.datapath = '../eeg_data';%input('What is the path to the data?\n ../eeg_data\n ../../Brooke/eeg_data\n other\n:', 's');
  subject.subject_num = input('Enter Subject #:');
  subject_num = subject.subject_num; % rename just to keep it short throughout the script
  subject.first_rejected_epochs = [];
@@ -27,7 +31,7 @@ try
    triggers{1}.name = 'stim_triggers';
    triggers{1}.cell_string = {'200', '201', '202'};
  % get input for which triggers to use
- input_trigger = input('Enter one of the following: \n stim_triggers OR\n feedback_triggers:', 's');
+   input_trigger = 'stim_triggers';%input('Enter one of the following: \n stim_triggers OR\n feedback_triggers:', 's');
   % get index based on inputted response
   num_names = 1:size(triggers, 2);
   index = arrayfun(@(num) strcmp(triggers{num}.name, input_trigger), num_names);
@@ -41,7 +45,8 @@ try
 
 %% initialize eeglab
   [ALLEEG, EEG, CURRENTSET, ALLCOM] = eeglab;
-
+  % why are these outputs all empty 
+    
 %% are we running this from the right place?
   try
     cd(subject.datapath); % will crash if we are not where we should be
@@ -50,9 +55,9 @@ try
   end
 
 %% make new directory
-  subject_string = sprintf('Oddball_%s_%d', subject.triggers_name, subject_num);
-  status = mkdir(sprintf('preprocessed_data/%s', subject_string));
-  folder = sprintf('preprocessed_data/%s', subject_string);
+  subject_string = sprintf('Oddball_%d', subject_num); % folder holding intermediary files
+  status = mkdir(sprintf('processed_data/%s', subject_string)); % can i make this? 
+  folder = sprintf('processed_data/%s', subject_string); % folder name, Oddball_# in processed_data parent folder
   subject_string = sprintf('Oddball_%d', subject_num); % remove trigger name for all output files
 
 %% File structure. This helps us to determine what files in the dir correspond to the next step %%
@@ -81,6 +86,9 @@ try
 if step == 0;
 
 %% Load the data
+  cd('../eeg_processing_scripts')
+  % the following doesn't run if i'm not in script-home
+  % but when i cd into script_home, i can't run pop_saveset b
   subject = load_eeg_data(subject.datapath, folder, subject_string, locpath, subject);
   subject.num_epochs = subject.EEG.trials;
   EEG = subject.EEG;
@@ -92,21 +100,23 @@ if step == 0;
 
   %% Identify bad epochs and channels
     input('Are you done rejecting epochs? Remember to press reject on the plot');
-    if exist('ALLEEG')
-      idx = size(ALLEEG, 2);
-      subject.first_rejected_epochs = ALLEEG(idx).reject.rejmanual ;
-    else
+%     if exist('ALLEEG')
+%       idx = size(ALLEEG, 2);
+%       subject.first_rejected_epochs = ALLEEG(idx).reject.rejmanual ;
+%     else
       subject.first_rejected_epochs = EEG.reject.rejmanual;
-    end
+%     end
     subject.first_interp = input('Please enter the channels that require interpolation as a cell of strings:');
     subject.interp = subject.first_interp ;
 
   %% Reject epochs, Interpolate, and Rereference
+    cd('../eeg_processing_scripts')
     subject = reject_interp_reref(subject);
     EEG = subject.EEG;
   %% Save
     subject.EEG = EEG;
-    save(sprintf('%s/%s_interpolated_rereferenced.mat', folder, subject_string),'-struct', 'subject');
+    
+    save(sprintf('../eeg_data/%s/%s_interpolated_rereferenced.mat', folder, subject_string),'-struct', 'subject');
     step = 1;
 
 end
@@ -115,7 +125,7 @@ end
 if step == 1
 
   %% Load saved data
-  load_string = input('Do you need to reload the structure? If so, press y', 's');
+  load_string = input('Do you need to reload the structure? If so, press y', 's'); % need to do this if your processing was interrupted
   if strcmp(load_string,'y')
     subject = load(sprintf('%s/%s_interpolated_rereferenced.mat', folder, subject_string));
     EEG = subject.EEG;
@@ -193,6 +203,7 @@ if step == 2
   % eeglab redraw
   pop_eegplot( EEG, 1, 1, 1);
 
+  % it says "Creating a new ALLEEG dataset 1" but ALLEEG is still empty []?
   %% Filter
     input('Ready to start filtering?');
     dims = size(EEG.data);
@@ -219,11 +230,14 @@ if step == 3
     end
 
   %% Plot channels to find abberant ERPs for epoch ejection
+    % here it is again. needs to be in preproc home
+    cd('../eeg_processing_scripts');
     plot_bad_epochs(subject, 3)
 
   %% Mark epochs for rejection
     pop_eegplot(EEG, 1, 1, 0, [],'color','on');
-
+    
+    % it will get mad at you if you move your mouse over the figure
 
     input('Look at the datatable above and determine if there are any more epochs ot delete. If there are, go to the epoch number on the plot and select the epochs for deletion. Press enter to continue')
     idx = size(ALLEEG, 2);
@@ -370,7 +384,7 @@ if step == 6
 
     pop_eegplot(EEG, 1, 1, 0, [],'color','on');
 
-
+    % why am i in an endless loop now
     input('Look at the datatable above and determine if there are any more epochs ot delete. If there are, go to the epoch number on the plot and select the epochs for deletion. Press enter to continue')
     idx = size(ALLEEG, 2);
     subject.third_rejected_epochs = ALLEEG(idx).reject.rejmanual ;
@@ -403,6 +417,7 @@ if step == 7
     end
 
   %% load raw eeg data
+  cd('../eeg_processing_scripts');
     new_eeg_data = load_eeg_data(subject.datapath, folder, subject_string, locpath, subject)
     subject.EEG = new_eeg_data.EEG;
     EEG = subject.EEG;
@@ -515,7 +530,9 @@ if step == 9
 
   %% save - DON'T FORGET THIS PART
   subject.EEG = EEG;
-  save(sprintf('%s/%s_interpolated_rereferenced_ica_filtered_FINAL.mat', folder, subject_string),'-struct', 'subject');
+  % here we go again
+  cd('../eeg_data');
+  save(sprintf('%s/%s_interpolated_rereferenced_ica_filtered_FINAL.mat', folder, subject_string),'-struct', 'subject'); % you're done if this exists
   %% clean up
   spit = input('Are you ready to delete intermediary files? If so, press y', 's');
   if strcmp(spit,'y')
