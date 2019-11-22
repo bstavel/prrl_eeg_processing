@@ -104,7 +104,7 @@ if step == 0;
 
   %% Identify bad epochs and channels
     input('Are you done rejecting epochs? Remember to press reject on the plot');
-    if exist('ALLEEG')
+    if exist('ALLEEG') & size(ALLEEG, 2) > 0
       idx = size(ALLEEG, 2);
       subject.first_rejected_epochs = ALLEEG(idx).reject.rejmanual ;
     else
@@ -512,15 +512,22 @@ if step == 8
 end
 
 if step == 9
+  %% Reload the structure
+    load_string = input('Do you need to reload the structure? If so, press y', 's');
+    if strcmp(load_string,'y')
+      subject = load(sprintf('%s/%s_third_interpolated_rereferenced_ica_filtered.mat', folder, subject_string));
+      EEG = subject.EEG;
+    end
   %% extract trial type info and save in human usable format %%
-  event_list = NaN(length(subject.EEG.epoch), 1);
-  for i = 1:length(subject.EEG.epoch)
-    tmp_cell = subject.EEG.epoch(i).eventtype;
-    trigNum = str2num(str2mat(subject.triggers));
-    cellIdx = cellfun(@(cell) sum(cell == trigNum), tmp_cell);
-    event_list(i) = tmp_cell{find(cellIdx == 1)} ;
-  end
-  subject.final_event_list = event_list ;
+    event_list = NaN(length(subject.EEG.epoch), 1);
+    for i = 1:length(subject.EEG.epoch)
+      tmp_cell = subject.EEG.epoch(i).eventtype;
+      trigNum = str2num(str2mat(subject.triggers));
+      cellIdx = cellfun(@(cell) sum(cell == trigNum), tmp_cell);
+      event_list(i) = tmp_cell{find(cellIdx == 1)} ;
+    end
+    subject.final_event_list = event_list;
+  % subject.final_event_list = [subject.EEG.event.type];
 
   %% any additional notes?
   subject.notes = input('Please enter any additional notes you may for this subject:', 's');
