@@ -9,7 +9,7 @@ After informed consent procedures and demographic data collection, each particip
 
 _Summary of these steps was provided by Beth Baribault_
 
-_For full acquisition instructions click [here](https://www.dropbox.com/s/ro5r9ywqc243dxi/Collins_Lab_EEG_Guide.docx?dl=0)
+_For full acquisition instructions click [here](https://www.dropbox.com/s/ro5r9ywqc243dxi/Collins_Lab_EEG_Guide.docx?dl=0)_
 
 ## Basic Preprocessing Steps
 
